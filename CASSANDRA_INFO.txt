@@ -1,0 +1,262 @@
+CASSANDRA DB
+HOW TO START CASSANDRA:
+1. cassandra -f 
+2. Assign IP if not assigned (sudo ifconfig lo0 alias 127.0.0.2 and sudo ifconfig lo0 alias 127.0.0.3)
+3. ccm start 
+4. Then check status of nodes ccm status 
+
+-->CASSANDRA is distributed and decentralised(there is no single entry point to enter into cluster) database 
+-->Distributed: This data is distributed across the nodes , there is clone of each data in all cluster nodes 
+
+Before Creating a cluster run following command to assign IP to each node on localhost
+sudo ifconfig lo0 alias 127.0.0.2
+sudo ifconfig lo0 alias 127.0.0.3
+
+Create Cluster 
+ccm create cluster_name -v 3.0.10(installed cassandra version) -n 2(no of nodes) -s (starts cluser) --pwd-auth
+ccm create easybuy -v 3.0.10 -n 2 -s --pwd-auth 
+
+SOME CLUSTER PORTS info 
+Thrift : 9160(connect cassandra node through thrift client )
+Binary : 9042(Connect cassandra node with CQL or drivers or from code )
+Storage : 7000(cassandra uses this port for inter communication between the nodes inside the cluster)
+
+SOME CCM Basic commands 
+CCM list (list all clsuters)
+ccm status 
+ccm stop(stops the current running cluster)
+ccm node1 show (show more description about the node1 in cluster which is confifured )
+ccm remove cluster_name (delete the specified cluster )
+
+Data Types:
+Normal,
+int,float,double,text,boolean 
+Advanced Data Types
+Blob, counter,UUID and timestamp
+Collection Data Types:
+map,list and set
+
+Primary Key:
+Unique key in column to identify a unique row
+Composite Key: Primary Key can be composed of multiple columns then it is called as Composite Key 
+Primary Key can be formed as Row Key because of Unique ness 
+
+COLUMN FAMILY ATTRIBUTES 
+key_cached:we can cach specified column in memory but limit is upto 200,000
+row_cached: we can cach the row data(rows sub set data) which is frequenlty accessed in memory 
+pre_load_cache:Boolean value(true or false ) whether you want to pre-populate the row cache 
+
+SUPER COLUMN FAMILY(SCF):
+n of columns can be grouped logically together called Super column FAMILY
+Dis advantage :
+Cassandra does not index super column FAMILY's column, hence we cannot fecth each column value from SCF
+
+KEY SPACE:
+Collection of one or more column families 
+and it is Outer most CONTAINER of DATA 
+
+ANOLOGY Between RDBMS and CASSANDRA(no SQL)
+Relation <---------->  Cassandra 
+Database              Key Space 
+Table                 Column FAMILY
+Primary Key           Row Key
+Column Name           Column Name 
+Column Value          Column Value 
+
+REPLICATION:
+Multiple copies of data are created and stored on different nodes 
+
+CQLSH Commands:
+How to create a Keyspace(databases)
+CREATE KEYSPACE Catalog WITH replication ={'class':'SimpleStrategy','replication_factor':'3'};
+
+How to List all the keyspaces :
+describe keyspaces;
+
+SimpleStrategy is algorithm to store replicas in different nodes of same data center 
+Network Topology Strategy : To store replicas in different nodes of different Data center 
+
+List All Coumn families:
+describe columnfamilies;
+
+CREATE COLUMNFAMILY(TABLE):
+CREATE COLUMNFAMILY product (productId varchar,title text,brand varchar, publisher varchar,length int,breadth int,height int,PRIMARY KEY(productId));
+
+ADD NEW COLUMN to columnfamilies:
+ALTER COLUMNFAMILY product ADD modelId text;
+
+INSERT Records into COLUMNFAMILY:
+INSERT INTO product(productid,brand,modelid) values('MOB1','Samsung','Galaxy S6');
+
+
+SELCT Data from COLUMNFAMILY:
+SELECT * from product;
+SELECT brand,productid from product;
+SELECT * from product WHERE productid='POST4';
+SELECT title from product WHERE productid='POST4';
+SELECT * from product WHERE productid IN ('POST4','POST2');
+
+ALTERS PROPERTIES of the COLUMNFAMILY:
+ALTER COLUMNFAMILY product WITH gc_grace_seconds=10000;
+Boom Filters:
+Will help to look up for keys 
+
+Data which is stored from Cassandra to HARD DISK in the form of SST(Sorted String Table) File 
+
+TTL:Time TO LIVE:
+Till when COLUMN or row data can exist into keyspace;
+insert into product(productid,title,breadth,length) values('POST4','led zepplein123',22,36) USING TTL 10000;
+
+Internally(in Hard disk), Column will not create if Data is not present for thr column;
+
+HOW DATA Will Store internally in Cassandra :
+Map<row_key,Sorted_Map<keys,value>> layout- a columnar layout;
+
+
+COLLECTIOn DATA TYPES:
+SET, LIST and MAP
+SET: Collection of one or more distinct elements
+LIST: Collection of one or more Ordrered Elements 
+MAP: Data of (Key - Value) pairs;
+
+SET:
+ALTER COLUMNFAMILY  product ADD keyfeatures set<text>;
+insert into product(productid,title,brand,keyfeatures) values('COM1','Acer One','Acer',{'deattachable keyboard','multipouch display'});
+
+LIST:(Order is important)
+Add column to product keyspaces of type set data type :
+ALTER COLUMNFAMILY  product ADD keyfeatures set<text>;
+insert into product(productid,title,brand,service_type) values('SOFA1','Urban Living Derby Sofa','Urban Living',['Needs to call seeller','Service Engineer will come to site']);
+
+MAP:(Key Value pair)
+ALTER COLUMNFAMILY product ADD Camera map<text,text>;
+Insert into product(productid,title,brand,camera) values('COM1','Acer One','Acer',{'front':'VGA','rear':'2MP'});
+
+ADVANCED DATATYPE:
+COUNTER:A Special column for Keeping count of an EVENT
+Few Restrinctions:
+1. COUNTER has to be stored in dedicated COLUMNFAMILY.
+2. We cannot create an index on the counter column  for faster look up
+COUNTER should be go into seperate COLUMNFAMILY because it has to keep count of each prodcut item;
+CREATE COLUMNFAMILY productviewcount(productid text primary key,viewcount counter);
+How to insert and update the counter :Both Insert and Update are same command
+UPDATE productviewcount set viewcount=viewcount+1 WHERE productid='COM1';
+
+UPDATE COMMAND:
+UPDATE product SET modelid='S6' WHERE productid='MOB1';
+UPDATE product SET length=20,breadth=20 WHERE productid in('POST3','POST2');
+
+ALL columns that make ups the PRIMARY KEY must exist in the WHERE clause;
+
+UPDATING COLUMNS with SPECIAL DATA TYPES(set,list,map);
+@@@ LIST @@@
+In the list Special data type we can perform following actions(add element,remove element and replace element)
+add element :
+set <Column_Name> = <Column_Name>+[new value];
+UPDATE product set service_type=service_type+['service engineer will inspect the damages'] WHERE productid='SOFA1';
+remove element :
+set <Column_Name> = <Column_Name>- [Exact exisiting value ]
+UPDATE product SET service_type=service_type-['Needs to call seeller'] WHERE productid='SOFA1';
+replace element :
+set <Column_Name>[index]= 'new value';
+index starts from 0;
+UPDATE product SET service_type[0]='Serivce Engineer will come to site and will repair' WHERE productid='SOFA1';
+
+@@@ SET @@@
+ADD Element:
+set <Column_Name> = <Column_Name>+{new vlaue};
+UPDATE product SET keyfeatures=keyfeatures+{'New Value'} WHERE productid='COM1';
+'Below items will be offer fr 1 day and post 1 day automatically they will be marked as DELETE'
+UPDATE product USING TTL 86400 SET keyfeatures=keyfeatures+{'Flat 10% OFF on all items for 1 day'} WHERE productid in ('COM1','COM2');
+
+Remove Element:
+SET <Column_Name> = <Column_Name>-{Exact existing value};
+UPDATE product SET keyfeatures=keyfeatures-{'New Value'} WHERE productid='COM1';
+
+Replace is not supported here since it is un order;
+
+@@@ MAP @@@ 
+ADD Element
+set <Column_Name>= <Column_Name>+{key:value};
+UPDATE product SET camera=camera+{'sim slot':'dual slim'} WHERE productid in ('COM1','COM1');
+
+REMOVE Element (DELETE keyword is used to remove the element )
+DELETE <Column_Name>['key'] from COLUMNFAMILY;
+DELETE camera['front'] from product WHERE productid in ('COM1','COM2');
+
+REPLACE THE ELEMENT 
+set <Column_Name>['key'] = 'new value';
+UPDATE product SET camera['rear']='Two M P' WHERE productid='COM1';
+
+
+@@@ PRIMARY KEY @@@
+Primay key is nothing but column or set of columns can uniquely identified the the rows in the columnfamilies
+Primay Key tells cassandra that how to store and distribute the data 
+Primay key is a combination of(Partition Key + Clustering Key);
+If Primay Key is made up of multiple columns then it is called as COMPOSITE KEY 
+Partition Key: decides how the data is distributed in the nodes 
+Clustering Key: Decides how the data is stored on the hard disk in a node 
+Primay Key can be from multiple columns :
+First column become : Partition Key 
+Remaining Columns becomes: Clustering key 
+
+Each Node in cassandra is assigned with a unique TOKEN 
+Each TOKEN determines WHICH ROWS of data is going to Store 
+
+How Data is distrubuted across the nodes.
+Every Node is assigned with a unique TOKEN and which are generates by Class method called PARTITIONER 
+Each NODE will be assigned with multiple TOKENS 
+@@@ PARTITIONE KEY 
+PARTITIONER : will distributes the data uniformally in all nodes of a cluster 
+RANDOMPARTITIONER : Distributes the data uniformally accross all nodes of a cluster using MD5 Hasing algorithm
+MURMER3Partitioner: Cassandra uses this PARTITIONER(default) using murmer hash algorithm
+
+NOTE: RANDOMPARTITIONER and MURMER3Partitioner will not allow to following queries RANGE and AGGREGATE 
+
+We have to use one more PARTITIONER to allow above queries "BYTEORderPartioner" and which has following limitions and this is only for 
+backword compatibility
+1. Creates Hotspots(access of all data from one nodes since the BYTEORderPartioner uses Hexa hashing algorithm to genereate keys and these keys
+ are sorted ordered so stored in on ONE NODE)
+
+2. Difficult to LOAD BALANCE 
+3. these all above makses the system unstable 
+
+@@@ CLUSTERING KEY 
+The Cloumns in the clustering key determines how the data is stored on the disk within a single NODE 
+There are chances repeating PK(PARTION KEY) for different rows with different CK(CLUSTERING KEY )
+
+Lets assumen how data is stored in disk from COMPOSITE KEY (PRIMARY KEY made of more than one COLUMN)
+PRIMARY KEY : PARTION Key(PK) + CLUSTER keys 2nd column (CKa) + CLUSTER KEY rd COLUMN (CKb)
+As said PARTION KEY can be repeat for many rows as show below 
+
+PK+ CKa1+CKb1
+    CKa2+CKb2
+    CKa3+CKb3
+
+CREATE COLUMNFAMILY with COMPOSITE KEY(PRIMARY KEY with multiple columns):
+CREATE COLUMNFAMILY skus (sellerId varchar, productId varchar,skuId varchar,title text,listingId varchar,isListingCreated boolean,timeofskucreation text, PRIMARY KEY((sellerId,skuId),timeofskucreation,productId ));
+
+PRIMARY KEY = PARTION KEY(sellerId,skuId) + CLUSTERING KEY (timeofskucreation,productId)
+
+IMPORT data from CSV files into CASSANDRA COLUMNFAMILY using following command:
+COPY skus(sellerId, productId,skuId,title,listingId,isListingCreated,timeofskucreation) FROM '/Applications/CODE/PROJECTS/CASSANDRA/skus.csv';
+
+How to QUERY from COMPOSITE KEY :
+SELECT * from skus WHERE sellerId='Chroma' and skuid='CHROMASKU1';
+-->because both seellerId and skuId forms Partition Key of PRIMARY KEY 
+
+RANGE OPERATIONS :Use the token(Partition Key) method to perform Range OPERATIONS
+Select * from skus WHERE token(sellerId,skuId) >= token('Chroma','ChromaSKU1');
+
+ORDER BY QUERY:
+WRONG QUERY:Because data cannot ordered from PARTION KEY 
+SELECT * from skus WHERE sellerId='Chroma' AND skuid IN ('SKU1','SKU2') ORDER BY sellerId;
+ORDER BY supported only on PARTION KEY 
+
+
+
+
+
+
+
+
